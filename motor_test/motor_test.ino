@@ -1,34 +1,78 @@
 /*
  * ============================================================
- *  DIRECT MOTOR RUNNER — 100% NON-JTAG SAFE PINS
+ *  DIRECT MOTOR RUNNER — ALL 4 DIRECTIONS TEST
  * ============================================================
- *  GPIO 39-42 on ESP32-S3 are hardware JTAG pins (stuck at 0V / 1.9V).
- *  We move IN1-IN4 to 100% pure, non-JTAG GPIOs on the SAME top row:
- *
- *    ENA (Green)  -> GPIO 38  (stays where it is — already 3.3V!)
- *    IN1 (Yellow) -> GPIO  1  (pure GPIO, side-by-side with 2)
- *    IN2 (Orange) -> GPIO  2  (pure GPIO, lights up IO2 LED!)
- *    IN3 (Red)    -> GPIO 47  (pure GPIO, side-by-side with 21)
- *    IN4 (Brown)  -> GPIO 21  (pure GPIO, side-by-side with 47)
- *    ENB (Red)    -> GPIO 45  (stays where it is — already 3.3V!)
+ *  Pins:
+ *    ENA (Green)  -> GPIO 38  (Left Speed Enable)
+ *    IN1 (Yellow) -> GPIO  1  (Left Direction A)
+ *    IN2 (Orange) -> GPIO 14  (Left Direction B — moved from 2 to avoid LED clamp!)
+ *    IN3 (Red)    -> GPIO 47  (Right Direction A)
+ *    IN4 (Brown)  -> GPIO 21  (Right Direction B)
+ *    ENB (Red)    -> GPIO 45  (Right Speed Enable)
  * ============================================================
  */
 
 #include <Arduino.h>
 
-#define PIN_ENA  38   // Green  wire (keep on 38)
-#define PIN_IN1   1   // Yellow wire (move from 39 -> 1)
-#define PIN_IN2   2   // Orange wire (move from 40 -> 2)
-#define PIN_IN3  47   // Red    wire (move from 41 -> 47)
-#define PIN_IN4  21   // Brown  wire (move from 42 -> 21)
-#define PIN_ENB  45   // Red    wire (keep on 45)
+#define PIN_ENA  38   // Green  wire (GPIO 38)
+#define PIN_IN1   1   // Yellow wire (GPIO 1)
+#define PIN_IN2  14   // Orange wire (GPIO 14 — moved from 2!)
+#define PIN_IN3  47   // Red    wire (GPIO 47)
+#define PIN_IN4  21   // Brown  wire (GPIO 21)
+#define PIN_ENB  45   // Red    wire (GPIO 45)
+
+void stopMotors() {
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, LOW);
+    digitalWrite(PIN_IN3, LOW);
+    digitalWrite(PIN_IN4, LOW);
+    digitalWrite(PIN_ENA, LOW);
+    digitalWrite(PIN_ENB, LOW);
+}
+
+void forwardMotors() {
+    digitalWrite(PIN_IN1, HIGH);
+    digitalWrite(PIN_IN2, LOW);
+    digitalWrite(PIN_IN3, HIGH);
+    digitalWrite(PIN_IN4, LOW);
+    digitalWrite(PIN_ENA, HIGH);
+    digitalWrite(PIN_ENB, HIGH);
+}
+
+void reverseMotors() {
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, HIGH);
+    digitalWrite(PIN_IN3, LOW);
+    digitalWrite(PIN_IN4, HIGH);
+    digitalWrite(PIN_ENA, HIGH);
+    digitalWrite(PIN_ENB, HIGH);
+}
+
+void pivotLeftMotors() {
+    digitalWrite(PIN_IN1, LOW);
+    digitalWrite(PIN_IN2, HIGH);  // Left reverse
+    digitalWrite(PIN_IN3, HIGH);
+    digitalWrite(PIN_IN4, LOW);   // Right forward
+    digitalWrite(PIN_ENA, HIGH);
+    digitalWrite(PIN_ENB, HIGH);
+}
+
+void pivotRightMotors() {
+    digitalWrite(PIN_IN1, HIGH);
+    digitalWrite(PIN_IN2, LOW);   // Left forward
+    digitalWrite(PIN_IN3, LOW);
+    digitalWrite(PIN_IN4, HIGH);  // Right reverse
+    digitalWrite(PIN_ENA, HIGH);
+    digitalWrite(PIN_ENB, HIGH);
+}
 
 void setup() {
     Serial.begin(115200);
     delay(1000);
 
     Serial.println("\n==========================================");
-    Serial.println("  MOTOR DRIVE TEST — SAFE NON-JTAG PINS   ");
+    Serial.println("  4-DIRECTION MOTOR TEST (FORWARD/REV/L/R)");
+    Serial.println("  Orange wire on GPIO 14 (IN2)            ");
     Serial.println("==========================================");
 
     pinMode(PIN_ENA, OUTPUT);
@@ -38,23 +82,31 @@ void setup() {
     pinMode(PIN_IN4, OUTPUT);
     pinMode(PIN_ENB, OUTPUT);
 
-    // Enable both sides (3.3V)
-    digitalWrite(PIN_ENA, HIGH);
-    digitalWrite(PIN_ENB, HIGH);
-
-    // Drive FORWARD using IN1=HIGH, IN2=LOW and IN3=HIGH, IN4=LOW
-    // (If Left spins backward, swap the two motor wires in OUT1 <-> OUT2 on the L298N!)
-    digitalWrite(PIN_IN1, HIGH);
-    digitalWrite(PIN_IN2, LOW);
-    digitalWrite(PIN_IN3, HIGH);
-    digitalWrite(PIN_IN4, LOW);
-
-    Serial.println("[OK] ENA(38)=3.3V  IN1(1)=3.3V   IN2(2)=0V  (Left FWD)");
-    Serial.println("[OK] ENB(45)=3.3V  IN3(47)=3.3V  IN4(21)=0V (Right FWD)");
-    Serial.println(">>> Wheels should spin FORWARD now! <<<");
+    stopMotors();
 }
 
 void loop() {
+    Serial.println("\n[TEST] 1. ALL 4 WHEELS FORWARD (1 second)...");
+    forwardMotors();
     delay(1000);
-    Serial.println("[RUNNING] Motors active (forward)...");
+    stopMotors();
+    delay(1000);
+
+    Serial.println("[TEST] 2. ALL 4 WHEELS REVERSE (1 second)...");
+    reverseMotors();
+    delay(1000);
+    stopMotors();
+    delay(1000);
+
+    Serial.println("[TEST] 3. PIVOT LEFT - All 4 wheels should spin (1 second)!");
+    pivotLeftMotors();
+    delay(1000);
+    stopMotors();
+    delay(1000);
+
+    Serial.println("[TEST] 4. PIVOT RIGHT - All 4 wheels should spin (1 second)!");
+    pivotRightMotors();
+    delay(1000);
+    stopMotors();
+    delay(2000);
 }

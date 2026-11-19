@@ -1,4 +1,5 @@
 #include "MotorDriver.h"
+#include "driver/gpio.h"
 
 MotorDriver::MotorDriver() {}
 
@@ -20,8 +21,16 @@ void MotorDriver::init() {
     pinMode(PIN_MOTOR_IN4, OUTPUT);
     pinMode(PIN_MOTOR_INB, OUTPUT);
 
+    // Boost all motor control GPIOs to maximum drive capability (40 mA)
+    gpio_set_drive_capability((gpio_num_t)PIN_MOTOR_INA, GPIO_DRIVE_CAP_3);
+    gpio_set_drive_capability((gpio_num_t)PIN_MOTOR_IN1, GPIO_DRIVE_CAP_3);
+    gpio_set_drive_capability((gpio_num_t)PIN_MOTOR_IN2, GPIO_DRIVE_CAP_3);
+    gpio_set_drive_capability((gpio_num_t)PIN_MOTOR_IN3, GPIO_DRIVE_CAP_3);
+    gpio_set_drive_capability((gpio_num_t)PIN_MOTOR_IN4, GPIO_DRIVE_CAP_3);
+    gpio_set_drive_capability((gpio_num_t)PIN_MOTOR_INB, GPIO_DRIVE_CAP_3);
+
     stop();
-    Serial.println("[OK] MotorDriver ready (Pure Digital 3.3V — matches motor_test.ino, zero LEDC conflict)");
+    Serial.println("[OK] MotorDriver ready (Pure Digital 3.3V Max-Drive — zero LEDC conflict)");
 }
 
 // ---------------------------------------------------------------------------
