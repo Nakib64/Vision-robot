@@ -11,7 +11,7 @@
 //     - Both Found: Compare dist! Pivot Left 90° if Left is closer; else lock Right.
 //     - Only Left Found: Pivot Left 90° to face it, lock and approach.
 //     - Only Right Found: Already facing Right, lock and approach.
-//     - Neither Found: Rotate 45° RIGHT again into unseen space (up to 6 times).
+//     - Neither Found: Rotate 45° LEFT (user diagnostic test for INB / left pivot)
 //                      After 6 attempts with no target: safe battery auto-shutdown!
 // ---------------------------------------------------------------------------
 void NavigationFSM::handleSweepScan(const TargetDetection &target, unsigned long now) {
@@ -213,12 +213,12 @@ void NavigationFSM::handleSweepScan(const TargetDetection &target, unsigned long
                 return;
             }
 
-            // Facing +45° Right -> Rotate 45° to the RIGHT again into brand new unseen space!
+            // Rotate 45° to the LEFT (user test to verify INB / left pivot performance)
             Serial.printf(
-                "[FSM:DECISION] STATE:SWEEP_SCAN | ACTION:ROTATE RIGHT 45 deg AGAIN (%d/%d) | L:+%d R:-%d\n",
+                "[FSM:DECISION] STATE:SWEEP_SCAN | ACTION:ROTATE LEFT 45 deg AGAIN (%d/%d) | L:-%d R:+%d\n",
                 m_sweepAttempts, SWEEP_MAX_ATTEMPTS, SPEED_PIVOT, SPEED_PIVOT);
             Serial.flush();
-            m_motors.pivotRight(SPEED_PIVOT);
+            m_motors.pivotLeft(SPEED_PIVOT);
             delay(SWEEP_LEFT_45_MS); // 310 ms
             m_motors.stop();
             delay(150);
