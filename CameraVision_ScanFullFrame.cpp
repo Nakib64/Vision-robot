@@ -27,13 +27,11 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
     }
     uint8_t meanVal = (nSamp > 0) ? (uint8_t)(sumVal / nSamp) : 100;
 
-    // Two adaptive thresholds:
-    //   Pass 0: Mean-anchored threshold (never blown out by a 255 light bulb)
-    //   Pass 1: +25 higher threshold (backup for bright sunlit / washed-out rooms)
-    uint8_t baseThresh = (uint8_t)constrain((int)(minVal + (meanVal - minVal) * 0.65f), 45, 95);
-    uint8_t passThresholds[2] = {
-        baseThresh,
-        (uint8_t)constrain((int)baseThresh + 25, 70, 125)
+    // Three adaptive thresholds for all lighting environments (dim, normal, bright):
+    uint8_t passThresholds[3] = {
+        (uint8_t)constrain((int)(minVal + (meanVal - minVal) * 0.45f), 35, 80),
+        (uint8_t)constrain((int)(minVal + (meanVal - minVal) * 0.65f), 45, 95),
+        (uint8_t)constrain((int)(minVal + (meanVal - minVal) * 0.85f), 65, 125)
     };
 
     // Component tracking for connected dark regions
@@ -58,9 +56,9 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
     int lastNumComps = 0;
     int lastTested   = 0;
     int lastValid    = 0;
-    uint8_t usedThresh = baseThresh;
+    uint8_t usedThresh = passThresholds[1];
 
-    for (int pass = 0; pass < 2 && !bestTarget.found; pass++) {
+    for (int pass = 0; pass < 3 && !bestTarget.found; pass++) {
         uint8_t darkThresh = passThresholds[pass];
         usedThresh = darkThresh;
 
@@ -174,34 +172,34 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 continue;
             }
 
-            // Aspect ratio: ArUco markers are square (0.60 to 1.65 allowing tilt)
+            // Aspect ratio: ArUco markers are square (allows tilt / perspective foreshortening)
             float aspect = (float)bh / (float)bw;
-            if (aspect < 0.60f || aspect > 1.65f) continue;
+            if (aspect < 0.45f || aspect > 2.20f) continue;
 
             testedCandidates++;
 
-            // 1. Mandatory White Quiet Zone Check:
-            int qx0 = max(0, b.minX - 6);
-            int qx1 = min(W - 1, b.maxX + 6);
-            int qy0 = max(0, b.minY - 6);
-            int qy1 = min(rowLimit - 1, b.maxY + 6);
+            // 1. White Quiet Zone Check (relaxed: requires light paper margin on >= 15% of perimeter)
+            int qx0 = max(0, b.minX - 5);
+            int qx1 = min(W - 1, b.maxX + 5);
+            int qy0 = max(0, b.minY - 5);
+            int qy1 = min(rowLimit - 1, b.maxY + 5);
 
             int lightCount = 0;
             int totalCheck = 0;
 
             for (int x = qx0; x <= qx1; x += 3) {
-                if (fb->buf[qy0 * W + x] >= darkThresh + 12) lightCount++;
-                if (fb->buf[qy1 * W + x] >= darkThresh + 12) lightCount++;
+                if (fb->buf[qy0 * W + x] >= darkThresh + 4) lightCount++;
+                if (fb->buf[qy1 * W + x] >= darkThresh + 4) lightCount++;
                 totalCheck += 2;
             }
             for (int y = qy0; y <= qy1; y += 3) {
-                if (fb->buf[y * W + qx0] >= darkThresh + 12) lightCount++;
-                if (fb->buf[y * W + qx1] >= darkThresh + 12) lightCount++;
+                if (fb->buf[y * W + qx0] >= darkThresh + 4) lightCount++;
+                if (fb->buf[y * W + qx1] >= darkThresh + 4) lightCount++;
                 totalCheck += 2;
             }
 
-            if (totalCheck > 0 && ((float)lightCount / (float)totalCheck) < 0.50f) {
-                continue; // Not a marker: surrounded by dark background/shadow!
+            if (totalCheck > 0 && ((float)lightCount / (float)totalCheck) < 0.15f) {
+                continue; // Surrounded entirely by dark background/shadow
             }
 
             // 2. Measure local border level vs outer quiet zone using 4 EDGE MIDPOINTS
@@ -213,19 +211,20 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
             uint8_t bRgt = fb->buf[midY * W + constrain(b.maxX - max(1, bw / 12), 0, W - 1)];
             uint8_t borderVal = min(min(bTop, bBot), min(bLft, bRgt));
 
-            uint8_t qTop = fb->buf[constrain(b.minY - 5, 0, rowLimit - 1) * W + midX];
-            uint8_t qBot = fb->buf[constrain(b.maxY + 5, 0, rowLimit - 1) * W + midX];
-            uint8_t qLft = fb->buf[midY * W + constrain(b.minX - 5, 0, W - 1)];
-            uint8_t qRgt = fb->buf[midY * W + constrain(b.maxX + 5, 0, W - 1)];
+            uint8_t qTop = fb->buf[constrain(b.minY - 4, 0, rowLimit - 1) * W + midX];
+            uint8_t qBot = fb->buf[constrain(b.maxY + 4, 0, rowLimit - 1) * W + midX];
+            uint8_t qLft = fb->buf[midY * W + constrain(b.minX - 4, 0, W - 1)];
+            uint8_t qRgt = fb->buf[midY * W + constrain(b.maxX + 4, 0, W - 1)];
             uint8_t quietVal = max(max(qTop, qBot), max(qLft, qRgt));
 
-            if (quietVal <= borderVal + 20) {
-                continue; // Insufficient contrast between border and paper
+            // Paper must be lighter than border (relaxed to +6 for indoor lighting)
+            if (quietVal <= borderVal + 6) {
+                continue;
             }
 
             uint8_t localThresh = (uint8_t)(((int)borderVal + (int)quietVal) / 2);
 
-            // 3. Sample 6x6 ArUco grid border
+            // 3. Sample 6x6 ArUco grid border (40% handles up to ~25 deg marker tilt cleanly)
             int borderDarkCount = 0;
             int borderTotal     = 0;
 
@@ -244,8 +243,8 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 }
             }
 
-            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.60f) {
-                continue; // Border is not dark
+            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.40f) {
+                continue; // Border is not dark enough
             }
 
             // 4. Sample inner 4x4 data bits using local threshold
@@ -262,14 +261,15 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 }
             }
 
-            if (onesCount < 4 || onesCount > 12) {
-                continue; // Must be a mix of black and white cells
+            // A valid pattern must have a mix of cells (at least 2 ones and at most 14 ones)
+            if (onesCount < 2 || onesCount > 14) {
+                continue;
             }
 
-            // 5. Decode against DICT_4X4_50
+            // 5. Decode against DICT_4X4_50 with 1-bit error correction (hamming <= 1, matches OpenCV)
             int hamming = 99;
             int decodedId = decodeAruco4x4(inner, hamming);
-            bool validMatch = (decodedId >= 0 && hamming == 0);
+            bool validMatch = (decodedId >= 0 && hamming <= 1);
 
 #if defined(TARGET_ARUCO_ID) && (TARGET_ARUCO_ID >= 0)
             if (decodedId != TARGET_ARUCO_ID) {
@@ -277,31 +277,19 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
             }
 #endif
 
+            // Check Visited Target Memory (6-second exclusion cooldown)
+            if (validMatch && isVisited(decodedId)) {
+                validMatch = false;
+            }
+
             if (validMatch) {
-                unsigned long nowMs = millis();
                 int candCenterX = (b.count > 0) ? (int)(b.sumX / b.count) : (b.minX + bw / 2);
                 float apparentWidth = (float)bw;
                 float distCm = (TARGET_REAL_WIDTH_CM * CAMERA_FX_PX) / max(apparentWidth, 1.0f);
 
-                // Skip VISITED targets
-                if (m_frontZoneActive) {
-                    if ((long)(nowMs - m_frontZoneUntil) >= 0) {
-                        m_frontZoneActive = false;
-                    } else if (abs(candCenterX - m_frontZoneCenterX) <= 75 && distCm < 75.0f) {
-                        continue;
-                    }
-                }
-#if !defined(TARGET_ARUCO_ID) || (TARGET_ARUCO_ID < 0)
-                if (decodedId >= 0 && decodedId < 50 && m_visitedIdUntil[decodedId] != 0) {
-                    if ((long)(nowMs - m_visitedIdUntil[decodedId]) < 0) {
-                        continue;
-                    }
-                }
-#endif
-
                 validCount++;
 
-                // Multi-detection nearest selection: keep closest UNVISITED marker
+                // Multi-detection nearest selection: keep closest marker
                 if (!bestTarget.found || distCm < bestDist) {
                     bestDist = distCm;
                     bestTarget.found           = true;

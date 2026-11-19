@@ -11,8 +11,13 @@ NavigationFSM::NavigationFSM(MotorDriver &motors, CameraVision &vision)
     , m_targetLostTimer(0)
     , m_lastLogTimer(0)
     , m_sweepStep(0)
+    , m_sweepAttempts(0)
     , m_clearedCount(0)
-{}
+    , m_reachConfirmCount(0)
+{
+    m_leftTarget  = m_vision.emptyResult();
+    m_rightTarget = m_vision.emptyResult();
+}
 
 // ---------------------------------------------------------------------------
 // resetBestTarget() — Clear tracking memory for current sector
@@ -42,9 +47,13 @@ void NavigationFSM::init() {
     m_targetLostTimer = millis();
     m_lastLogTimer    = 0;
     m_sweepStep       = 0;
+    m_sweepAttempts   = 0;
     m_clearedCount    = 0;
+    m_reachConfirmCount = 0;
+    m_leftTarget      = m_vision.emptyResult();
+    m_rightTarget     = m_vision.emptyResult();
     resetBestTarget();
     m_vision.unlockTarget();
     m_motors.stop();
-    Serial.println("[FSM] Initialised -> SWEEP_SCAN (ArUco DICT_4X4_50 Discovery Active)");
+    Serial.println("[FSM] Initialised -> SWEEP_SCAN (Dual-Side Panoramic Search Active)");
 }

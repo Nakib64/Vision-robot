@@ -58,7 +58,7 @@ TargetDetection CameraVision::scanTrackedRoi(camera_fb_t *fb) {
     int bh = maxY - minY + 1;
     float aspect = (float)bh / (float)bw;
 
-    if (aspect < 0.50f || aspect > 1.90f || bw < MIN_MARKER_PX) {
+    if (aspect < 0.40f || aspect > 2.20f || bw < MIN_MARKER_PX) {
         return emptyResult();
     }
 

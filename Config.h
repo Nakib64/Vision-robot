@@ -91,34 +91,47 @@
 // Set to true once on first test to run a 2-second FWD/REV/LEFT/RIGHT wheel check
 #define RUN_BOOT_MOTOR_TEST false
 
-// Aim-Then-Drive alignment & slow pulse-step motion (uses pure digital 3.3V — zero LEDC stall!)
-//   - Target within +-ALIGN_TOLERANCE_DEG of 90° -> drive DIRECTLY STRAIGHT in slow controlled steps
-//   - Target beyond tolerance                    -> gentle proportional turn pulse to center the target
-#define ALIGN_TOLERANCE_DEG  12.0f // +-12 deg from straight (78 deg .. 102 deg) -> drive straight
-#define AIM_TURN_RATE_MS     8.5f  // Milliseconds per degree offset (gentle pulse, prevents slip & overshoot)
-#define AIM_TURN_MIN_MS      80    // Minimum pulse (ms) to overcome motor static friction
-#define AIM_TURN_MAX_MS     220    // Strict maximum pulse (ms) — guarantees target NEVER leaves camera view!
-#define DRIVE_STEP_MS       160    // Forward step duration (ms) — lower (e.g. 120) = slower!
-#define DRIVE_PAUSE_MS      220    // Settle pause between forward steps (ms) — higher (e.g. 300) = slower!
+// Aim-Then-Drive alignment & Look-Move-Look Halving Approach (Zero Motion Blur!)
+//   - Target within +-ALIGN_TOLERANCE_DEG of 90° -> calculate half distance and move forward
+//   - Target beyond tolerance                    -> move backward slightly + calibrated rotation pulse
+#define ALIGN_TOLERANCE_DEG  20.0f // If target is within 20° of 90° (70°..110°), move straight
+#define AIM_STICTION_MS      150   // Static friction break base duration (ms)
+#define AIM_TURN_RATE_MS     3.55f // Milliseconds per degree above stiction (45° = 150 + 45*3.55 = 310 ms)
+#define AIM_TURN_MIN_MS      180   // Minimum pulse (ms) to overcome motor static friction
+#define AIM_TURN_MAX_MS      420   // Maximum pulse (ms) for large angles (up to 80° offset)
+#define AIM_REVERSE_MS       200   // Move backward slightly before rotating to break stiction (like sweep clearance)
+
+// 65mm Wheel Speed Calibration & Motion Blur Settle Timing
+// Wheel circumference = PI * 65mm = ~20.4 cm
+// Under 3x 18650 cells (~11.1V through L298N), 4WD TT chassis moves at ~25 cm/s.
+// DRIVE_MS_PER_CM = 1000 / 25.0 = 40 ms per cm. Adjust (e.g. 35-50) if needed.
+#define WHEEL_DIAMETER_MM       65.0f // Standard 65mm rubber tire
+#define DRIVE_MS_PER_CM         40    // Milliseconds per cm forward drive (40 ms/cm = ~25 cm/s)
+#define CHASSIS_SETTLE_MS      350    // Settle pause (ms) after stopping so camera captures razor-sharp frame!
 #define STEERING_KP          0.7f  // (legacy)
 #define DEADBAND_PX           18   // (legacy)
 
 // -----------------------------
-// 5. SWEEP SCAN TIMING (ms)
-//    Simple right-only stepped search: LOOK → (no target?) → ROTATE RIGHT 45°
+// 5. SWEEP SCAN TIMING & SEARCH LIMITS (ms)
+//    Human-Like Dual-Side Scan: Look Left 45° -> Swing Right 90° -> Pick Nearest!
+//    - Calibrated 4WD pulses: 310 ms = 45°, 450 ms = 90°
+//    - If neither side has target, rotates 45° Right again (max 6 attempts)
+//    - After 6 attempts without finding a target: auto-shuts down to protect battery
 // -----------------------------
-#define SWEEP_LOOK_MS      1500   // Pause & look forward (1.5 s) before rotating — increase (e.g. 2000-3000) for longer scan
-#define SWEEP_LEFT_45_MS    450   // Rotate ~45 deg right per search step
-#define SWEEP_RIGHT_90_MS   900   // (legacy constant)
-#define SWEEP_CENTER_45_MS  450   // (legacy constant)
+#define SWEEP_LOOK_MS        1200   // Pause & look stationary per side (1.2 s)
+#define SWEEP_LEFT_45_MS      310   // Pivot 45° pulse duration (310 ms = 45°)
+#define SWEEP_RIGHT_90_MS     450   // Swing 90° pulse duration (450 ms = 90°)
+#define SWEEP_MAX_ATTEMPTS      6   // Max full sweep attempts before automatic power-down
+#define SWEEP_CENTER_45_MS    310   // (legacy constant)
 
 // -----------------------------
 // 6. CLEARANCE, VISITED MEMORY & RECOVERY TIMING (ms)
 // -----------------------------
-#define REVERSE_DURATION_MS   450   // Back up slightly after reaching target
-#define PIVOT_AWAY_MS         600   // (optional, unused in backup-and-look mode)
-#define VISITED_IGNORE_MS   30000   // Remember & avoid a visited target for 30 sec
-#define TARGET_LOST_MS       2500   // Wait 2.5 s before giving up mid-approach (prevents premature re-sweep)
+#define TARGET_REACHED_PAUSE_MS 2000   // Option B: Pause 2.0s at target before touring next
+#define REVERSE_DURATION_MS      600   // Back up after reaching target (600 ms)
+#define PIVOT_AWAY_MS            310   // Rotate 45° away from reached target (310 ms = 45°)
+#define VISITED_IGNORE_MS       6000   // Remember & avoid a visited target for 6 sec
+#define TARGET_LOST_MS          2500   // Wait 2.5 s before giving up mid-approach (prevents premature re-sweep)
 
 // -----------------------------
 // 7. VISUAL PREVIEW STREAM (PC Debug)

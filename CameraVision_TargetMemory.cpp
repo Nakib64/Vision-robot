@@ -51,3 +51,19 @@ void CameraVision::clearFrontVisitedZone() {
         Serial.println("[VISION] Rotated away -> cleared front visited-zone mask");
     }
 }
+
+// ---------------------------------------------------------------------------
+// isVisited() — Check if a marker ID or front zone is in active cooldown
+// ---------------------------------------------------------------------------
+bool CameraVision::isVisited(int tagId) const {
+    unsigned long now = millis();
+    // 1. Check ID cooldown table (active for 6 seconds)
+    if (tagId >= 0 && tagId < 50 && m_visitedIdUntil[tagId] > now) {
+        return true;
+    }
+    // 2. Check front zone mask (active for 6 seconds unless cleared)
+    if (m_frontZoneActive && m_frontZoneUntil > now) {
+        return true;
+    }
+    return false;
+}

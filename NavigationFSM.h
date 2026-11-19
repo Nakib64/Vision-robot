@@ -47,17 +47,22 @@ private:
     unsigned long m_lastLogTimer;
 
     // Sweep bookkeeping
-    int           m_sweepStep;      // 0 = pivot-left, 1 = pivot-right, 2 = evaluate
-    TargetDetection m_bestTarget;   // Nearest tag spotted across current sweep arc
+    int             m_sweepStep;      // 0=turnLeft, 1=lookLeft, 2=swingRight, 3=lookRight, 4=evaluate
+    TargetDetection m_bestTarget;     // Selected winner target
+    TargetDetection m_leftTarget;     // Candidate spotted on Left side
+    TargetDetection m_rightTarget;    // Candidate spotted on Right side
+    int             m_sweepAttempts;  // Counts 0..SWEEP_MAX_ATTEMPTS before auto-shutdown
 
     // Session statistics
     int           m_clearedCount;
+    int           m_reachConfirmCount;
 
     // ── State handlers ──────────────────────────────────────────────────────
     void handleSweepScan    (const TargetDetection &target, unsigned long now);
     void handleApproach     (const TargetDetection &target, unsigned long now);
-    void handleTargetReached(unsigned long now);
+    void handleTargetReached(const TargetDetection &target, unsigned long now);
     void handleClearancePivot(unsigned long now);
+    void handleHalted       (unsigned long now);
 
     // Helpers
     void resetBestTarget();

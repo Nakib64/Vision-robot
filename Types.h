@@ -11,10 +11,11 @@
 // Navigation Finite State Machine States
 // ---------------------------------------------------------------------------
 enum class RobotState {
-    SWEEP_SCAN,       // 3-step panoramic sweep to find nearest ArUco marker
+    SWEEP_SCAN,       // Dual-side human-like sweep (Left 45° -> Right 90° -> Pick Closest)
     APPROACH_TARGET,  // Proportional-steering drive toward locked target (Fast ROI)
-    TARGET_REACHED,   // Within STOP_DISTANCE_CM: motors off, brief pause
-    CLEARANCE_PIVOT   // Reverse + pivot so tag leaves FOV; loop back to sweep
+    TARGET_REACHED,   // Within STOP_DISTANCE_CM: motors off, 2.0s arrival pause
+    CLEARANCE_PIVOT,  // Reverse + pivot away so tag leaves FOV; loop back to sweep
+    ROBOT_HALTED      // No target found after max attempts: motors 0V, safe power-down
 };
 
 // ---------------------------------------------------------------------------

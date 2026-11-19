@@ -40,6 +40,7 @@ public:
     // Visited-Target Memory API (avoids re-locking a recently reached target)
     void markVisited(int tagId, int centerX, unsigned long durationMs);
     void clearFrontVisitedZone();
+    bool isVisited(int tagId) const;
 
 private:
     bool configureCamera();
@@ -56,10 +57,10 @@ private:
     int decodeAruco4x4(const uint8_t inner[4][4], int &outHamming);
 
     // Shared detection constants
-    static constexpr int MIN_MARKER_PX   = 22;   // Min size (rejects distant specks/noise < 22px)
+    static constexpr int MIN_MARKER_PX   = 14;   // Min size (detects markers up to ~2 meters away!)
     static constexpr int MAX_MARKER_PX   = 300;  // Max bounding box width/height
     static constexpr int CROP_BOTTOM     = 10;   // Ignore bottom 10 rows (chassis edge)
-    static constexpr int MIN_TRACK_COUNT = 60;   // Min dark pixels in ROI mode
+    static constexpr int MIN_TRACK_COUNT = 40;   // Min dark pixels in ROI mode
 
     bool          m_locked;
     TrackedRoi    m_trackedRoi;

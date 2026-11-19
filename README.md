@@ -698,25 +698,39 @@ Below is a complete guide to every function across all firmware modules.
 * **`update(target)`**: Called once every loop cycle; dispatches execution to the handler matching `m_state`.
 * **`stateName(state)`**: Returns human-readable state name string for serial diagnostic logs.
 
-#### 3. Continuous 360° Radar Search ([NavigationFSM_SweepScan.cpp](NavigationFSM_SweepScan.cpp))
+#### 3. Human-Like Dual-Side Scan & Auto-Shutdown ([NavigationFSM_SweepScan.cpp](NavigationFSM_SweepScan.cpp))
 * **`handleSweepScan(target, now)`**:
-  * **Stationary Look Window**: Halts motors and looks forward for `SWEEP_LOOK_MS` (1.5 s) so the camera takes blur-free captures.
-  * **Instant Lock**: If a target is seen at ANY angle, immediately locks and transitions to `APPROACH_TARGET`.
-  * **Stepped Rotation**: If no target is seen, executes a crisp in-place 45° right turn (`SWEEP_LEFT_45_MS = 450 ms`), pauses 150 ms to settle chassis vibration, and repeats across 8 sectors (full 360°).
+  * **Step 0 & 1 (Look Left)**: Pivots Left 45° (`SWEEP_LEFT_45_MS = 310 ms`), holds position for `SWEEP_LOOK_MS` (1.2 s), and samples `leftTarget`.
+  * **Step 2 & 3 (Look Right)**: Swings Right 90° (`SWEEP_RIGHT_90_MS = 450 ms`, now facing +45° Right), holds position for `SWEEP_LOOK_MS` (1.2 s), and samples `rightTarget`.
+  * **Step 4 (Evaluate & Commit)**:
+    * **Both Found**: Compares `leftTarget.dist` vs `rightTarget.dist`. If Left is closer, swings Left 90° back and approaches; if Right is closer, locks and approaches directly!
+    * **Only Left Found**: Swings Left 90° back, locks, and approaches.
+    * **Only Right Found**: Locks and approaches directly.
+    * **Neither Found**: Rotates **45° to the RIGHT again** into brand new room space and advances the search attempt counter (`attempts++`).
+    * **Battery Protection Auto-Shutdown**: If no marker is found after 6 complete sweep attempts, all motors are powered down (`0V`) and the robot enters a safe sleep state (`ROBOT_HALTED`) displaying: `NO TARGET AVAILABLE`.
 
-#### 4. Aim-Then-Drive Approach ([NavigationFSM_Approach.cpp](NavigationFSM_Approach.cpp))
+#### 4. Look-Move-Look Halving Approach ([NavigationFSM_Approach.cpp](NavigationFSM_Approach.cpp))
 * **`handleApproach(target, now)`**:
-  * **Arrival Check**: If target distance is $\le 25\text{ cm}$, stops motors, marks target as VISITED, and transitions to `TARGET_REACHED`.
+  * **Stationary Vision Capture**: The robot only computes target distance while stopped, completely eliminating camera motion blur!
+  * **Arrival Check**: If target distance is $\le 25\text{ cm}$, stops motors and transitions to `TARGET_REACHED`.
   * **Aim-Then-Drive Alignment**:
-    * If target is within $\pm 12^\circ$ of center ($78^\circ \dots 102^\circ$): Drives straight forward slowly in controlled pulse steps (`DRIVE_STEP_MS = 160 ms`, pause 220 ms).
-    * If target is $> 12^\circ$ off-center: Calculates a gentle proportional turn pulse (`AIM_TURN_RATE_MS = 8.5 ms/deg`, clamped to 80–220 ms). Executes a gentle in-place nudge toward the target and pauses 150 ms to settle. Strictly prevents wheel slip and keeps the target in the camera's field of view.
+    * If target is $\le 20^\circ$ off-center ($70^\circ \le \theta \le 110^\circ$), it drives straight.
+    * If target is $> 20^\circ$ off-center: Backs up slightly (`AIM_REVERSE_MS = 200 ms`) to break tire stiction and clear space, then rotates for `turnMs = 150 + (offset * 3.55 ms)` (matching the calibrated 45° = 310 ms physics curve), stops, and settles 350 ms for the next frame.
+  * **Halving-Distance Timed Step**:
+    * When aligned within $\pm 20^\circ$, calculates the remaining gap to 25 cm ($d_{\text{remaining}} = D - 25\text{ cm}$).
+    * Drives forward for **half of that remaining distance** using 65mm wheel speed calibration (`DRIVE_MS_PER_CM = 40 ms/cm`).
+    * **Stops completely** after reaching the half distance and pauses 350 ms to settle chassis vibration.
+    * Grabs a fresh razor-sharp frame, recalculates the remaining distance, and repeats until the 25 cm stop threshold is reached!
   * **Target Lost Watchdog**: If the target is occluded or lost for $> 2.5\text{ s}$, safely falls back to `SWEEP_SCAN`.
 
-#### 5. Stop & Mark Visited ([NavigationFSM_TargetReached.cpp](NavigationFSM_TargetReached.cpp))
-* **`handleTargetReached(now)`**: Stops motors, stabilizes the chassis for 400 ms, logs target arrival, and switches to `CLEARANCE_PIVOT`.
+#### 5. Arrival Celebration Pause ([NavigationFSM_TargetReached.cpp](file:///e:/academic%20documents/2.2/hardware/robot_v1/esp32_firmware/NavigationFSM_TargetReached.cpp))
+* **`handleTargetReached(target, now)`**: Stops motors (`stop()`) and holds position at the reached marker for 2.0 seconds (`TARGET_REACHED_PAUSE_MS = 2000`). Once the 2-second arrival pause elapses, automatically transitions to `CLEARANCE_PIVOT` to start the continuous tour.
 
-#### 6. Backup & Resume Search ([NavigationFSM_ClearancePivot.cpp](NavigationFSM_ClearancePivot.cpp))
-* **`handleClearancePivot(now)`**: Reverses motors (`reverse(SPEED_REVERSE)`) for 450 ms to gain clearance from the reached marker, resets tracking memory, and returns to `SWEEP_SCAN` looking forward while ignoring the visited marker.
+#### 6. Obstacle Clearance & Pivot Away ([NavigationFSM_ClearancePivot.cpp](file:///e:/academic%20documents/2.2/hardware/robot_v1/esp32_firmware/NavigationFSM_ClearancePivot.cpp))
+* **`handleClearancePivot(now)`**:
+  1. Backs up for `REVERSE_DURATION_MS` (600 ms) to gain safe distance from the marker/wall.
+  2. Pivots right 45° (`PIVOT_AWAY_MS = 310 ms`) away from the marker it just reached so the camera is pointed into open space.
+  3. Increments the `clearedCount` counter, unlocks vision target memory, and switches state to `SWEEP_SCAN` to search 360° for the next marker.
 
 ---
 
