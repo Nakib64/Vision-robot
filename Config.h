@@ -92,14 +92,14 @@
 #define RUN_BOOT_MOTOR_TEST false
 
 // Aim-Then-Drive alignment & Look-Move-Look Halving Approach (Zero Motion Blur!)
-//   - Target within +-ALIGN_TOLERANCE_DEG of 90° -> calculate half distance and move forward
-//   - Target beyond tolerance                    -> move backward slightly + calibrated rotation pulse
-#define ALIGN_TOLERANCE_DEG  20.0f // If target is within 20° of 90° (70°..110°), move straight
-#define AIM_STICTION_MS      150   // Static friction break base duration (ms)
-#define AIM_TURN_RATE_MS     3.55f // Milliseconds per degree above stiction (45° = 150 + 45*3.55 = 310 ms)
-#define AIM_TURN_MIN_MS      180   // Minimum pulse (ms) to overcome motor static friction
-#define AIM_TURN_MAX_MS      420   // Maximum pulse (ms) for large angles (up to 80° offset)
-#define AIM_REVERSE_MS       200   // Move backward slightly before rotating to break stiction (like sweep clearance)
+//   - Strict Alignment: target must be within +-6° of center (84°..96°) before driving forward!
+//   - Target beyond tolerance -> rotates exact calibrated angle pulse to center target
+#define ALIGN_TOLERANCE_DEG   6.0f // Strict crosshair alignment: target must be within +-6° of center
+#define AIM_STICTION_MS       150  // Static friction break base duration (ms)
+#define AIM_TURN_RATE_MS      3.55f // Milliseconds per degree above stiction (45° = 150 + 45*3.55 = 310 ms)
+#define AIM_TURN_MIN_MS       175  // Minimum pulse (ms) to overcome motor static friction
+#define AIM_TURN_MAX_MS       420  // Maximum pulse (ms) for large angles (up to 80° offset)
+#define AIM_REVERSE_MS        100  // Settle clearance (ms)
 
 // 65mm Wheel Speed Calibration & Motion Blur Settle Timing
 // Wheel circumference = PI * 65mm = ~20.4 cm
@@ -113,16 +113,17 @@
 
 // -----------------------------
 // 5. SWEEP SCAN TIMING & SEARCH LIMITS (ms)
-//    Human-Like Dual-Side Scan: Look Left 45° -> Swing Right 90° -> Pick Nearest!
-//    - Calibrated 4WD pulses: 310 ms = 45°, 450 ms = 90°
-//    - If neither side has target, rotates 45° Right again (max 6 attempts)
-//    - After 6 attempts without finding a target: auto-shuts down to protect battery
+//    Simple & Robust 360° Search: Look Stationary -> (no target?) -> Rotate Right 45°
+//    - Look stationary for 1.2s. If ANY target spotted -> LOCK IMMEDIATELY & APPROACH!
+//    - If no target -> Rotate Right 45° (310 ms) into next sector.
+//    - 8 steps * 45° = 360° full circle. After 8 empty steps: auto-power-down to save battery.
 // -----------------------------
-#define SWEEP_LOOK_MS        1200   // Pause & look stationary per side (1.2 s)
-#define SWEEP_LEFT_45_MS      380   // Pivot 45° left swing pulse duration (ms)
-#define SWEEP_RIGHT_90_MS     450   // Swing 90° right pulse duration (450 ms = 90°)
-#define SWEEP_MAX_ATTEMPTS      6   // Max full sweep attempts before automatic power-down
-#define SWEEP_CENTER_45_MS    310   // (legacy constant)
+#define SWEEP_LOOK_MS        1200   // Pause & look stationary per sector (1.2 s)
+#define SWEEP_RIGHT_45_MS     310   // Pivot Right 45° search step pulse (310 ms = 45°)
+#define SWEEP_MAX_ATTEMPTS      8   // Max search steps before automatic power-down (8 * 45° = 360°)
+#define SWEEP_LEFT_45_MS      310   // (legacy compatibility)
+#define SWEEP_RIGHT_90_MS     450   // (legacy compatibility)
+#define SWEEP_CENTER_45_MS    310   // (legacy compatibility)
 
 // -----------------------------
 // 6. CLEARANCE, VISITED MEMORY & RECOVERY TIMING (ms)

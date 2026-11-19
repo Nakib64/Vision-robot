@@ -42,28 +42,16 @@ void NavigationFSM::handleApproach(const TargetDetection &target, unsigned long 
         float absOffset = fabsf(offsetDeg);
 
         if (absOffset > ALIGN_TOLERANCE_DEG) {
-            // Calibrated turn duration matching 45° = 310 ms physics equation:
+            // Calibrated turn duration: strictly turns whatever angle the target is at!
             // turnMs = AIM_STICTION_MS + (absOffset * AIM_TURN_RATE_MS)
-            // e.g. for 33°: 150 + 33*3.55 = 267 ms
-            // e.g. for 45°: 150 + 45*3.55 = 310 ms
             int turnMs = constrain(
                 (int)(AIM_STICTION_MS + (absOffset * AIM_TURN_RATE_MS)),
                 AIM_TURN_MIN_MS,
                 AIM_TURN_MAX_MS
             );
 
-            // Exactly like sweep clearance: Move backward slightly, then rotate (not forward!)
-            Serial.printf(
-                "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM BACKWARD CLEARANCE (%dms) | L:-%d R:-%d\n",
-                AIM_REVERSE_MS, SPEED_REVERSE, SPEED_REVERSE);
-            Serial.flush();
-            m_motors.reverse(SPEED_REVERSE);
-            delay(AIM_REVERSE_MS);
-            m_motors.stop();
-            delay(100);
-
             if (offsetDeg > 0.0f) {
-                // Target is LEFT -> rotate LEFT
+                // Target is LEFT -> rotate LEFT in-place to face target
                 Serial.printf(
                     "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM LEFT %.1f deg (at %.1f deg, %dms) | L:-%d R:+%d\n",
                     absOffset, target.polarAngleDeg, turnMs, SPEED_PIVOT, SPEED_PIVOT);
@@ -73,7 +61,7 @@ void NavigationFSM::handleApproach(const TargetDetection &target, unsigned long 
                 m_motors.stop();
                 delay(CHASSIS_SETTLE_MS);
             } else {
-                // Target is RIGHT -> rotate RIGHT
+                // Target is RIGHT -> rotate RIGHT in-place to face target
                 Serial.printf(
                     "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM RIGHT %.1f deg (at %.1f deg, %dms) | L:+%d R:+%d\n",
                     absOffset, target.polarAngleDeg, turnMs, SPEED_PIVOT, SPEED_PIVOT);

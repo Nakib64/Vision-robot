@@ -55,5 +55,5 @@ void NavigationFSM::init() {
     resetBestTarget();
     m_vision.unlockTarget();
     m_motors.stop();
-    Serial.println("[FSM] Initialised -> SWEEP_SCAN (Dual-Side Panoramic Search Active)");
+    Serial.println("[FSM] Initialised -> SWEEP_SCAN (Stepped 360° Search Active)");
 }
