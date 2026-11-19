@@ -72,18 +72,7 @@ void MotorDriver::setSpeeds(int leftSpeed, int rightSpeed) {
 
 void MotorDriver::forward(int speed)    { setSpeeds( speed,  speed); }
 void MotorDriver::reverse(int speed)    { setSpeeds(-speed, -speed); }
-
-// Power Swing Turn: Drives Right forward while Left rolls freely (ENA=LOW).
-// Eliminates the L298N active dynamic brake lock caused by IN2 3.3V threshold,
-// allowing the right wheels to swing the robot left smoothly with full torque.
-void MotorDriver::pivotLeft(int speed) {
-    digitalWrite(PIN_MOTOR_IN1, LOW);
-    digitalWrite(PIN_MOTOR_IN2, LOW);
-    digitalWrite(PIN_MOTOR_INA, LOW); // Left coast / freewheel (no brake!)
-
-    applyMotor(PIN_MOTOR_IN3, PIN_MOTOR_IN4, PIN_MOTOR_INB, speed); // Right forward
-}
-
+void MotorDriver::pivotLeft(int speed)  { setSpeeds(-speed,  speed); }
 void MotorDriver::pivotRight(int speed) { setSpeeds( speed, -speed); }
 
 void MotorDriver::stop() {
