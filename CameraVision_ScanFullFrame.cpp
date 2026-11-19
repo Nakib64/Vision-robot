@@ -42,8 +42,8 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
     };
 
     // Declared static to avoid stack allocation on FreeRTOS stack
-    static constexpr int MAX_RUNS  = 200;
-    static constexpr int MAX_COMPS = 96;
+    static constexpr int MAX_RUNS  = 256;
+    static constexpr int MAX_COMPS = 128;
 
     struct RowRun { int startX, endX, compIdx; };
 
@@ -198,7 +198,7 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 totalCheck += 2;
             }
 
-            if (totalCheck > 0 && ((float)lightCount / (float)totalCheck) < 0.15f) {
+            if (totalCheck > 0 && ((float)lightCount / (float)totalCheck) < 0.05f) {
                 continue; // Surrounded entirely by dark background/shadow
             }
 
@@ -217,14 +217,14 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
             uint8_t qRgt = fb->buf[midY * W + constrain(b.maxX + 4, 0, W - 1)];
             uint8_t quietVal = max(max(qTop, qBot), max(qLft, qRgt));
 
-            // Paper must be lighter than border (relaxed to +6 for indoor lighting)
-            if (quietVal <= borderVal + 6) {
+            // Paper must be lighter than border (relaxed to +2 for edge/off-center targets)
+            if (quietVal <= borderVal + 2) {
                 continue;
             }
 
             uint8_t localThresh = (uint8_t)(((int)borderVal + (int)quietVal) / 2);
 
-            // 3. Sample 6x6 ArUco grid border (40% handles up to ~25 deg marker tilt cleanly)
+            // 3. Sample 6x6 ArUco grid border (25% handles steep angle tilt & edge distortion)
             int borderDarkCount = 0;
             int borderTotal     = 0;
 
@@ -243,7 +243,7 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 }
             }
 
-            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.40f) {
+            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.25f) {
                 continue; // Border is not dark enough
             }
 
@@ -284,7 +284,7 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
 
             if (validMatch) {
                 int candCenterX = (b.count > 0) ? (int)(b.sumX / b.count) : (b.minX + bw / 2);
-                float apparentWidth = (float)bw;
+                float apparentWidth = (float)max(bw, bh);
                 float distCm = (TARGET_REAL_WIDTH_CM * CAMERA_FX_PX) / max(apparentWidth, 1.0f);
 
                 validCount++;

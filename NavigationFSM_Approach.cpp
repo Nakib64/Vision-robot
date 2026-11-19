@@ -22,7 +22,6 @@ void NavigationFSM::handleApproach(const TargetDetection &target, unsigned long 
             m_reachConfirmCount++;
             if (m_reachConfirmCount >= 2) {
                 m_vision.unlockTarget();
-                m_vision.markVisited(target.tagId, target.centerX, VISITED_IGNORE_MS);
                 Serial.printf(
                     "[FSM:DECISION] STATE:TARGET_REACHED | ACTION:TARGET REACHED! (%.1f cm <= %.1f cm) | L:0 R:0\n",
                     target.estimatedDistCm, STOP_DISTANCE_CM);
@@ -37,34 +36,34 @@ void NavigationFSM::handleApproach(const TargetDetection &target, unsigned long 
             m_reachConfirmCount = 0;
         }
 
-        // 2. Alignment Check: Aim-Then-Drive
-        float offsetDeg = target.polarAngleDeg - 90.0f;
-        float absOffset = fabsf(offsetDeg);
+        // 2. Alignment Check: Aim-Then-Drive directly using optical angleDeg
+        float angle = target.angleDeg;
+        float absAngle = fabsf(angle);
 
-        if (absOffset > ALIGN_TOLERANCE_DEG) {
+        if (absAngle > ALIGN_TOLERANCE_DEG) {
             // Calibrated turn duration: strictly turns whatever angle the target is at!
-            // turnMs = AIM_STICTION_MS + (absOffset * AIM_TURN_RATE_MS)
+            // turnMs = AIM_STICTION_MS + (absAngle * AIM_TURN_RATE_MS)
             int turnMs = constrain(
-                (int)(AIM_STICTION_MS + (absOffset * AIM_TURN_RATE_MS)),
+                (int)(AIM_STICTION_MS + (absAngle * AIM_TURN_RATE_MS)),
                 AIM_TURN_MIN_MS,
                 AIM_TURN_MAX_MS
             );
 
-            if (offsetDeg > 0.0f) {
-                // Target is LEFT -> rotate LEFT in-place to face target
+            if (angle < 0.0f) {
+                // Target is on the LEFT -> rotate LEFT in-place to center it
                 Serial.printf(
-                    "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM LEFT %.1f deg (at %.1f deg, %dms) | L:-%d R:+%d\n",
-                    absOffset, target.polarAngleDeg, turnMs, SPEED_PIVOT, SPEED_PIVOT);
+                    "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM LEFT %.1f deg (%dms) | L:-%d R:+%d\n",
+                    absAngle, turnMs, SPEED_PIVOT, SPEED_PIVOT);
                 Serial.flush();
                 m_motors.pivotLeft(SPEED_PIVOT);
                 delay(turnMs);
                 m_motors.stop();
                 delay(CHASSIS_SETTLE_MS);
             } else {
-                // Target is RIGHT -> rotate RIGHT in-place to face target
+                // Target is on the RIGHT -> rotate RIGHT in-place to center it
                 Serial.printf(
-                    "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM RIGHT %.1f deg (at %.1f deg, %dms) | L:+%d R:+%d\n",
-                    absOffset, target.polarAngleDeg, turnMs, SPEED_PIVOT, SPEED_PIVOT);
+                    "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM RIGHT %.1f deg (%dms) | L:+%d R:+%d\n",
+                    absAngle, turnMs, SPEED_PIVOT, SPEED_PIVOT);
                 Serial.flush();
                 m_motors.pivotRight(SPEED_PIVOT);
                 delay(turnMs);

@@ -92,9 +92,9 @@
 #define RUN_BOOT_MOTOR_TEST false
 
 // Aim-Then-Drive alignment & Look-Move-Look Halving Approach (Zero Motion Blur!)
-//   - Strict Alignment: target must be within +-6° of center (84°..96°) before driving forward!
+//   - Strict Alignment: target must be within +-9° of center before driving forward!
 //   - Target beyond tolerance -> rotates exact calibrated angle pulse to center target
-#define ALIGN_TOLERANCE_DEG   6.0f // Strict crosshair alignment: target must be within +-6° of center
+#define ALIGN_TOLERANCE_DEG   9.0f // Crosshair alignment tolerance (prevents hunting oscillations)
 #define AIM_STICTION_MS       150  // Static friction break base duration (ms)
 #define AIM_TURN_RATE_MS      3.55f // Milliseconds per degree above stiction (45° = 150 + 45*3.55 = 310 ms)
 #define AIM_TURN_MIN_MS       175  // Minimum pulse (ms) to overcome motor static friction

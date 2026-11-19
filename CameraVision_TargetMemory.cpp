@@ -27,43 +27,26 @@ void CameraVision::unlockTarget() {
 }
 
 // ---------------------------------------------------------------------------
-// markVisited() — Add target to temporary exclusion memory (cooldown)
+// markVisited() — (Disabled per user request: target memory off)
 // ---------------------------------------------------------------------------
 void CameraVision::markVisited(int tagId, int centerX, unsigned long durationMs) {
-    unsigned long until = millis() + durationMs;
-    m_frontZoneActive  = true;
-    m_frontZoneCenterX = centerX;
-    m_frontZoneUntil   = until;
-
-    if (tagId >= 0 && tagId < 50) {
-        m_visitedIdUntil[tagId] = until;
-    }
-    Serial.printf("[VISION] Marked ID:%d (x=%d) as VISITED for %lu s\n",
-                  tagId, centerX, durationMs / 1000UL);
+    (void)tagId;
+    (void)centerX;
+    (void)durationMs;
+    // Memory disabled: never exclude any marker
 }
 
 // ---------------------------------------------------------------------------
-// clearFrontVisitedZone() — Clear front exclusion mask once robot rotates away
+// clearFrontVisitedZone() — (Disabled per user request)
 // ---------------------------------------------------------------------------
 void CameraVision::clearFrontVisitedZone() {
-    if (m_frontZoneActive) {
-        m_frontZoneActive = false;
-        Serial.println("[VISION] Rotated away -> cleared front visited-zone mask");
-    }
+    m_frontZoneActive = false;
 }
 
 // ---------------------------------------------------------------------------
-// isVisited() — Check if a marker ID or front zone is in active cooldown
+// isVisited() — Returns false always (visited memory disabled)
 // ---------------------------------------------------------------------------
 bool CameraVision::isVisited(int tagId) const {
-    unsigned long now = millis();
-    // 1. Check ID cooldown table (active for 6 seconds)
-    if (tagId >= 0 && tagId < 50 && m_visitedIdUntil[tagId] > now) {
-        return true;
-    }
-    // 2. Check front zone mask (active for 6 seconds unless cleared)
-    if (m_frontZoneActive && m_frontZoneUntil > now) {
-        return true;
-    }
-    return false;
+    (void)tagId;
+    return false; // Never ignore any detected marker!
 }

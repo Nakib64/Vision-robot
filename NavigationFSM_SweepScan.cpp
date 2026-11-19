@@ -70,17 +70,8 @@ void NavigationFSM::handleSweepScan(const TargetDetection &target, unsigned long
             m_sweepAttempts++;
 
             if (m_sweepAttempts >= SWEEP_MAX_ATTEMPTS) {
-                // 360° full circle scanned with no target found -> safe auto-shutdown!
-                m_motors.stop();
-                m_state        = RobotState::ROBOT_HALTED;
-                m_stateTimer   = now;
-                m_lastLogTimer = 0;
-                Serial.printf(
-                    "\n[FSM:DECISION] STATE:ROBOT_HALTED | ACTION:POWER DOWN (No target after %d sectors) | L:0 R:0\n",
-                    SWEEP_MAX_ATTEMPTS);
-                Serial.println("[FSM:HALT] >>> NO TARGET AVAILABLE (360° search complete) <<<");
-                Serial.println("[FSM:HALT] Motors powered down. Press ESP32 RST button to restart.");
-                return;
+                m_sweepAttempts = 0; // 360° circle complete -> keep scanning continuously!
+                Serial.println("[FSM:SWEEP] Full 360° scanned -> continuing endless search loop...");
             }
 
             Serial.printf(
