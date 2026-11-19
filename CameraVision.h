@@ -42,10 +42,12 @@ public:
     void clearFrontVisitedZone();
     bool isVisited(int tagId) const;
 
+    // Helper: returns an empty / invalid TargetDetection struct
+    TargetDetection emptyResult() const;
+
 private:
     bool configureCamera();
     void configureSensorTuning();
-    TargetDetection emptyResult() const;
 
     // Mode A: Full-frame ArUco candidate discovery
     TargetDetection scanFullFrame(camera_fb_t *fb);
