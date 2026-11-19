@@ -41,14 +41,14 @@
 //
 //    ENA ─ PWM speed control   (Left  motor)  → GPIO 38
 //    IN1 ─ Direction bit A     (Left  motor)  → GPIO  1
-//    IN2 ─ Direction bit B     (Left  motor)  → GPIO 14 (moved from 2: eliminates onboard LED clamp!)
+//    IN2 ─ Direction bit B     (Left  motor)  → GPIO 48 (Right header between 45 and 47: pure 3.3V, no LED clamp!)
 //    IN3 ─ Direction bit A     (Right motor)  → GPIO 47
 //    IN4 ─ Direction bit B     (Right motor)  → GPIO 21
 //    ENB ─ PWM speed control   (Right motor)  → GPIO 45
 // -----------------------------
 #define PIN_MOTOR_INA    38   // Left  Motor — PWM speed (LEDC)
 #define PIN_MOTOR_IN1     1   // Left  Motor — direction A (digital)
-#define PIN_MOTOR_IN2    14   // Left  Motor — direction B (GPIO 14: 100% clean 3.3V, no onboard LED)
+#define PIN_MOTOR_IN2    48   // Left  Motor — direction B (GPIO 48: Right Header, pure 3.3V, zero LED clamp)
 #define PIN_MOTOR_IN3    47   // Right Motor — direction A (digital)
 #define PIN_MOTOR_IN4    21   // Right Motor — direction B (digital)
 #define PIN_MOTOR_INB    45   // Right Motor — PWM speed (LEDC)

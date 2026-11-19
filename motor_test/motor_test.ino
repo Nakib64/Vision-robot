@@ -5,7 +5,7 @@
  *  Pins:
  *    ENA (Green)  -> GPIO 38  (Left Speed Enable)
  *    IN1 (Yellow) -> GPIO  1  (Left Direction A)
- *    IN2 (Orange) -> GPIO 14  (Left Direction B — moved from 2 to avoid LED clamp!)
+ *    IN2 (Orange) -> GPIO 48  (Left Direction B — Right Header pin between 45 and 47!)
  *    IN3 (Red)    -> GPIO 47  (Right Direction A)
  *    IN4 (Brown)  -> GPIO 21  (Right Direction B)
  *    ENB (Red)    -> GPIO 45  (Right Speed Enable)
@@ -16,7 +16,7 @@
 
 #define PIN_ENA  38   // Green  wire (GPIO 38)
 #define PIN_IN1   1   // Yellow wire (GPIO 1)
-#define PIN_IN2  14   // Orange wire (GPIO 14 — moved from 2!)
+#define PIN_IN2  48   // Orange wire (GPIO 48 — Right Header between 45 and 47!)
 #define PIN_IN3  47   // Red    wire (GPIO 47)
 #define PIN_IN4  21   // Brown  wire (GPIO 21)
 #define PIN_ENB  45   // Red    wire (GPIO 45)
