@@ -5,7 +5,7 @@
  *  Platform : ESP32-S3-WROOM-1-N16R8  (16 MB Flash, 8 MB OPI PSRAM)
  *  Camera   : OV2640  —  PIXFORMAT_GRAYSCALE, FRAMESIZE_QVGA (320×240)
  *  Vision   : Embedded ArUco (DICT_4X4_50) with Lock-and-Track ROI Optimization
- *  Motor    : L298N H-Bridge (ENA=GPIO38, IN1=1, IN2=48, IN3=47, IN4=21, ENB=GPIO45)
+ *  Motor    : L298N H-Bridge (ENA=GPIO38, IN1=1, IN2=14, IN3=47, IN4=21, ENB=GPIO45)
  *
  *  100% Standalone Autonomous Operation — Zero PC Dependency.
  *  Clean Serial debug telemetry at 115200 baud.

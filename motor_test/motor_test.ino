@@ -16,7 +16,7 @@
 
 #define PIN_ENA  38   // Green  wire (GPIO 38)
 #define PIN_IN1   1   // Yellow wire (GPIO 1)
-#define PIN_IN2  48   // Orange wire (GPIO 48 — Right Header between 45 and 47!)
+#define PIN_IN2  14   // Orange wire (GPIO 14 — Left Header, 3rd pin from bottom!)
 #define PIN_IN3  47   // Red    wire (GPIO 47)
 #define PIN_IN4  21   // Brown  wire (GPIO 21)
 #define PIN_ENB  45   // Red    wire (GPIO 45)
