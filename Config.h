@@ -119,8 +119,8 @@
 //    - After 6 attempts without finding a target: auto-shuts down to protect battery
 // -----------------------------
 #define SWEEP_LOOK_MS        1200   // Pause & look stationary per side (1.2 s)
-#define SWEEP_LEFT_45_MS      310   // Pivot 45° pulse duration (310 ms = 45°)
-#define SWEEP_RIGHT_90_MS     450   // Swing 90° pulse duration (450 ms = 90°)
+#define SWEEP_LEFT_45_MS      380   // Pivot 45° left swing pulse duration (ms)
+#define SWEEP_RIGHT_90_MS     450   // Swing 90° right pulse duration (450 ms = 90°)
 #define SWEEP_MAX_ATTEMPTS      6   // Max full sweep attempts before automatic power-down
 #define SWEEP_CENTER_45_MS    310   // (legacy constant)
 
