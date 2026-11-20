@@ -94,11 +94,12 @@
 // Aim-Then-Drive alignment & Look-Move-Look Halving Approach (Zero Motion Blur!)
 //   - Strict Alignment: target must be within +-9° of center before driving forward!
 //   - Target beyond tolerance -> rotates exact calibrated angle pulse to center target
+//   - Calibrated for 3S Li-ion pack across full (12.6V) to discharged (~10V) range
 #define ALIGN_TOLERANCE_DEG   9.0f // Crosshair alignment tolerance (prevents hunting oscillations)
-#define AIM_STICTION_MS       150  // Static friction break base duration (ms)
-#define AIM_TURN_RATE_MS      3.55f // Milliseconds per degree above stiction (45° = 150 + 45*3.55 = 310 ms)
-#define AIM_TURN_MIN_MS       175  // Minimum pulse (ms) to overcome motor static friction
-#define AIM_TURN_MAX_MS       420  // Maximum pulse (ms) for large angles (up to 80° offset)
+#define AIM_STICTION_MS       110  // Static friction break base duration (ms)
+#define AIM_TURN_RATE_MS      2.00f // Milliseconds per degree above stiction (45° = 110 + 45*2.0 = 200 ms)
+#define AIM_TURN_MIN_MS       125  // Minimum pulse (ms) to overcome motor static friction
+#define AIM_TURN_MAX_MS       260  // Maximum pulse (ms) for large angles
 #define AIM_REVERSE_MS        100  // Settle clearance (ms)
 
 // 65mm Wheel Speed Calibration & Motion Blur Settle Timing
@@ -115,22 +116,23 @@
 // 5. SWEEP SCAN TIMING & SEARCH LIMITS (ms)
 //    Simple & Robust 360° Search: Look Stationary -> (no target?) -> Rotate Right 45°
 //    - Look stationary for 1.2s. If ANY target spotted -> LOCK IMMEDIATELY & APPROACH!
-//    - If no target -> Rotate Right 45° (310 ms) into next sector.
-//    - 8 steps * 45° = 360° full circle. After 8 empty steps: auto-power-down to save battery.
+//    - If no target -> Rotate Right 45° (200 ms) into next sector.
+//    - Calibrated to 200 ms: yields ~45-50° at full charge (12.6V) and ~35° at lower charge.
+//      Both are within the 60° camera FOV, ensuring 100% room coverage with zero blind spots!
 // -----------------------------
 #define SWEEP_LOOK_MS        1200   // Pause & look stationary per sector (1.2 s)
-#define SWEEP_RIGHT_45_MS     310   // Pivot Right 45° search step pulse (310 ms = 45°)
-#define SWEEP_MAX_ATTEMPTS      8   // Max search steps before automatic power-down (8 * 45° = 360°)
-#define SWEEP_LEFT_45_MS      310   // (legacy compatibility)
-#define SWEEP_RIGHT_90_MS     450   // (legacy compatibility)
-#define SWEEP_CENTER_45_MS    310   // (legacy compatibility)
+#define SWEEP_RIGHT_45_MS     200   // Pivot Right 45° search step pulse (200 ms)
+#define SWEEP_MAX_ATTEMPTS      8   // Max search steps per 360° circle (continues loop)
+#define SWEEP_LEFT_45_MS      200   // (legacy compatibility)
+#define SWEEP_RIGHT_90_MS     320   // (legacy compatibility)
+#define SWEEP_CENTER_45_MS    200   // (legacy compatibility)
 
 // -----------------------------
 // 6. CLEARANCE, VISITED MEMORY & RECOVERY TIMING (ms)
 // -----------------------------
-#define TARGET_REACHED_PAUSE_MS 2000   // Option B: Pause 2.0s at target before touring next
+#define TARGET_REACHED_PAUSE_MS 2000   // Pause 2.0s at target
 #define REVERSE_DURATION_MS      600   // Back up after reaching target (600 ms)
-#define PIVOT_AWAY_MS            310   // Rotate 45° away from reached target (310 ms = 45°)
+#define PIVOT_AWAY_MS            200   // Rotate 45° away from reached target (200 ms)
 #define VISITED_IGNORE_MS       6000   // Remember & avoid a visited target for 6 sec
 #define TARGET_LOST_MS          2500   // Wait 2.5 s before giving up mid-approach (prevents premature re-sweep)
 
