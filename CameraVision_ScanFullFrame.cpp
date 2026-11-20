@@ -202,9 +202,9 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
 
             uint8_t borderAvg = (borderTotal > 0) ? (uint8_t)(borderSum / borderTotal) : 50;
 
-            // Must have contrast between black border and inner white cells (at least 8 levels)
+            // Must have contrast between black border and inner white cells (at least 12 levels)
             // Completely independent of external quiet zone (works on dark chairs, dark walls, stacked markers)
-            if (innerMax <= borderAvg + 8) {
+            if (innerMax <= borderAvg + 12) {
                 continue; // Solid black blob or no white cells
             }
 
@@ -225,7 +225,7 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 }
             }
 
-            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.30f) {
+            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.35f) {
                 continue; // Border is not dark enough
             }
 
@@ -246,10 +246,10 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 continue;
             }
 
-            // 4. Decode against ArUco DICT_4X4_50 with up to 2-bit error correction
+            // 4. Decode against ArUco DICT_4X4_50 with 1-bit error correction
             int hamming = 99;
             int decodedId = decodeAruco4x4(inner, hamming);
-            bool validMatch = (decodedId >= 0 && hamming <= 2);
+            bool validMatch = (decodedId >= 0 && hamming <= 1);
 
 #if defined(TARGET_ARUCO_ID) && (TARGET_ARUCO_ID >= 0)
             if (decodedId != TARGET_ARUCO_ID) {

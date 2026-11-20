@@ -24,22 +24,11 @@ void NavigationFSM::handleTargetReached(const TargetDetection &target, unsigned 
         return;
     }
 
-    // Telemetry log during the 2-second arrival pause
-    if (now - m_lastLogTimer >= 400) {
-        float remainingSec = max(0.0f, (float)(TARGET_REACHED_PAUSE_MS - (now - m_stateTimer)) / 1000.0f);
+    // Telemetry log while holding position at marker
+    if (now - m_lastLogTimer >= 1000) {
         Serial.printf(
-            "[FSM:DECISION] STATE:TARGET_REACHED | ACTION:ARRIVED AT MARKER! (Touring in %.1fs) | L:0 R:0\n",
-            remainingSec);
+            "[FSM:DECISION] STATE:TARGET_REACHED | ACTION:HOLDING POSITION AT MARKER (%.1f cm <= %.1f cm) | L:0 R:0\n",
+            target.found ? target.estimatedDistCm : STOP_DISTANCE_CM, STOP_DISTANCE_CM);
         m_lastLogTimer = now;
-    }
-
-    // Option B: 2.0s pause complete -> Start clearance backup & pivot away to tour next marker!
-    if (now - m_stateTimer >= TARGET_REACHED_PAUSE_MS) {
-        Serial.println("[FSM:REACHED] 2-second pause complete -> Starting clearance backup & pivot!");
-        m_reachConfirmCount = 0;
-        m_state             = RobotState::CLEARANCE_PIVOT;
-        m_stateTimer        = now;
-        m_lastLogTimer      = 0;
-        return;
     }
 }

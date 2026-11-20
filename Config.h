@@ -63,7 +63,7 @@
 // -----------------------------
 // 3. VISION & TARGET PARAMETERS
 // -----------------------------
-#define TARGET_ARUCO_ID       -1       // Target marker ID (-1 for any marker/DICT_4X4_50; >=0 for specific ID)
+#define TARGET_ARUCO_ID        0       // Target marker ID: ArUco ID 0 (0 for aruco_a4_id0.png)
 #define TARGET_REAL_WIDTH_CM   10.0f   // Printed tag physical width (cm)
 #define STOP_DISTANCE_CM       25.0f   // Trigger TARGET_REACHED at <= 25 cm
 
@@ -131,7 +131,7 @@
 // 6. CLEARANCE, VISITED MEMORY & RECOVERY TIMING (ms)
 // -----------------------------
 #define TARGET_REACHED_PAUSE_MS 2000   // Pause 2.0s at target
-#define REVERSE_DURATION_MS      600   // Back up after reaching target (600 ms)
+#define REVERSE_DURATION_MS        0   // Disabled: robot stays at marker, zero backward drive
 #define PIVOT_AWAY_MS            200   // Rotate 45° away from reached target (200 ms)
 #define VISITED_IGNORE_MS       6000   // Remember & avoid a visited target for 6 sec
 #define TARGET_LOST_MS          2500   // Wait 2.5 s before giving up mid-approach (prevents premature re-sweep)

@@ -50,22 +50,12 @@ int CameraVision::decodeAruco4x4(const uint8_t inner[4][4], int &outHamming) {
                     code = (code << 1) | (bit & 1);
                 }
             }
-            // Check ArUco DICT_4X4_50 (50 markers) FIRST (primary target dictionary)
+            // Check ArUco DICT_4X4_50 (50 markers)
             for (int id = 0; id < 50; id++) {
                 int dist = __builtin_popcount(code ^ ARUCO_DICT_4X4_50[id]);
                 if (dist < bestDist) {
                     bestDist = dist;
                     bestId   = id;
-                }
-            }
-            // Check AprilTag tag16h5 (30 markers) as secondary fallback only if no clean ArUco match
-            if (bestDist > 1) {
-                for (int id = 0; id < 30; id++) {
-                    int dist = __builtin_popcount(code ^ APRILTAG_DICT_16H5[id]);
-                    if (dist < bestDist) {
-                        bestDist = dist;
-                        bestId   = id;
-                    }
                 }
             }
         }
