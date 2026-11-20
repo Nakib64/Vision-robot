@@ -50,22 +50,22 @@ void NavigationFSM::handleApproach(const TargetDetection &target, unsigned long 
             );
 
             if (angle < 0.0f) {
-                // Target is on the LEFT -> rotate LEFT in-place to center it
+                // Target angle is negative -> physically requires pivot towards the target
                 Serial.printf(
                     "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM LEFT %.1f deg (%dms) | L:-%d R:+%d\n",
                     absAngle, turnMs, SPEED_PIVOT, SPEED_PIVOT);
                 Serial.flush();
-                m_motors.pivotLeft(SPEED_PIVOT);
+                m_motors.pivotRight(SPEED_PIVOT);
                 delay(turnMs);
                 m_motors.stop();
                 delay(CHASSIS_SETTLE_MS);
             } else {
-                // Target is on the RIGHT -> rotate RIGHT in-place to center it
+                // Target angle is positive -> physically requires pivot towards the target
                 Serial.printf(
                     "[FSM:DECISION] STATE:APPROACH_TARGET | ACTION:AIM RIGHT %.1f deg (%dms) | L:+%d R:+%d\n",
                     absAngle, turnMs, SPEED_PIVOT, SPEED_PIVOT);
                 Serial.flush();
-                m_motors.pivotRight(SPEED_PIVOT);
+                m_motors.pivotLeft(SPEED_PIVOT);
                 delay(turnMs);
                 m_motors.stop();
                 delay(CHASSIS_SETTLE_MS);
