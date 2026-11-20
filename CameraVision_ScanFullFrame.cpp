@@ -178,84 +178,64 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
 
             testedCandidates++;
 
-            // 1. White Quiet Zone Check (relaxed: requires light paper margin on >= 15% of perimeter)
-            int qx0 = max(0, b.minX - 5);
-            int qx1 = min(W - 1, b.maxX + 5);
-            int qy0 = max(0, b.minY - 5);
-            int qy1 = min(rowLimit - 1, b.maxY + 5);
-
-            int lightCount = 0;
-            int totalCheck = 0;
-
-            for (int x = qx0; x <= qx1; x += 3) {
-                if (fb->buf[qy0 * W + x] >= darkThresh + 4) lightCount++;
-                if (fb->buf[qy1 * W + x] >= darkThresh + 4) lightCount++;
-                totalCheck += 2;
-            }
-            for (int y = qy0; y <= qy1; y += 3) {
-                if (fb->buf[y * W + qx0] >= darkThresh + 4) lightCount++;
-                if (fb->buf[y * W + qx1] >= darkThresh + 4) lightCount++;
-                totalCheck += 2;
-            }
-
-            if (totalCheck > 0 && ((float)lightCount / (float)totalCheck) < 0.05f) {
-                continue; // Surrounded entirely by dark background/shadow
-            }
-
-            // 2. Measure local border level vs outer quiet zone using 4 EDGE MIDPOINTS
-            int midX = constrain(b.minX + bw / 2, 0, W - 1);
-            int midY = constrain(b.minY + bh / 2, 0, rowLimit - 1);
-            uint8_t bTop = fb->buf[constrain(b.minY + max(1, bh / 12), 0, rowLimit - 1) * W + midX];
-            uint8_t bBot = fb->buf[constrain(b.maxY - max(1, bh / 12), 0, rowLimit - 1) * W + midX];
-            uint8_t bLft = fb->buf[midY * W + constrain(b.minX + max(1, bw / 12), 0, W - 1)];
-            uint8_t bRgt = fb->buf[midY * W + constrain(b.maxX - max(1, bw / 12), 0, W - 1)];
-            uint8_t borderVal = min(min(bTop, bBot), min(bLft, bRgt));
-
-            uint8_t qTop = fb->buf[constrain(b.minY - 4, 0, rowLimit - 1) * W + midX];
-            uint8_t qBot = fb->buf[constrain(b.maxY + 4, 0, rowLimit - 1) * W + midX];
-            uint8_t qLft = fb->buf[midY * W + constrain(b.minX - 4, 0, W - 1)];
-            uint8_t qRgt = fb->buf[midY * W + constrain(b.maxX + 4, 0, W - 1)];
-            uint8_t quietVal = max(max(qTop, qBot), max(qLft, qRgt));
-
-            // Paper must be lighter than border (relaxed to +2 for edge/off-center targets)
-            if (quietVal <= borderVal + 2) {
-                continue;
-            }
-
-            uint8_t localThresh = (uint8_t)(((int)borderVal + (int)quietVal) / 2);
-
-            // 3. Sample 6x6 ArUco grid border (25% handles steep angle tilt & edge distortion)
-            int borderDarkCount = 0;
-            int borderTotal     = 0;
+            // 1. Measure border darkness and find brightest inner cell directly from marker
+            long borderSum   = 0;
+            int  borderTotal = 0;
+            uint8_t innerMin = 255;
+            uint8_t innerMax = 0;
 
             for (int r = 0; r < 6; r++) {
                 for (int c = 0; c < 6; c++) {
+                    int sx = constrain(b.minX + (int)((c + 0.5f) * bw / 6.0f), 0, W - 1);
+                    int sy = constrain(b.minY + (int)((r + 0.5f) * bh / 6.0f), 0, rowLimit - 1);
+                    uint8_t val = fb->buf[sy * W + sx];
+
                     if (r == 0 || r == 5 || c == 0 || c == 5) {
-                        int sx = b.minX + (int)((c + 0.5f) * bw / 6.0f);
-                        int sy = b.minY + (int)((r + 0.5f) * bh / 6.0f);
-                        sx = constrain(sx, 0, W - 1);
-                        sy = constrain(sy, 0, rowLimit - 1);
-                        if (fb->buf[sy * W + sx] <= localThresh) {
-                            borderDarkCount++;
-                        }
+                        borderSum += val;
                         borderTotal++;
+                    } else {
+                        if (val < innerMin) innerMin = val;
+                        if (val > innerMax) innerMax = val;
                     }
                 }
             }
 
-            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.25f) {
+            uint8_t borderAvg = (borderTotal > 0) ? (uint8_t)(borderSum / borderTotal) : 50;
+
+            // Must have contrast between black border and inner white cells (at least 8 levels)
+            // Completely independent of external quiet zone (works on dark chairs, dark walls, stacked markers)
+            if (innerMax <= borderAvg + 8) {
+                continue; // Solid black blob or no white cells
+            }
+
+            // Optimal adaptive local threshold between marker's own black and white cells
+            uint8_t localThresh = (uint8_t)(((int)borderAvg + (int)innerMax) / 2);
+
+            // 2. Verify border is primarily dark
+            int borderDarkCount = 0;
+            for (int r = 0; r < 6; r++) {
+                for (int c = 0; c < 6; c++) {
+                    if (r == 0 || r == 5 || c == 0 || c == 5) {
+                        int sx = constrain(b.minX + (int)((c + 0.5f) * bw / 6.0f), 0, W - 1);
+                        int sy = constrain(b.minY + (int)((r + 0.5f) * bh / 6.0f), 0, rowLimit - 1);
+                        if (fb->buf[sy * W + sx] <= localThresh) {
+                            borderDarkCount++;
+                        }
+                    }
+                }
+            }
+
+            if (borderTotal > 0 && ((float)borderDarkCount / (float)borderTotal) < 0.30f) {
                 continue; // Border is not dark enough
             }
 
-            // 4. Sample inner 4x4 data bits using local threshold
+            // 3. Sample inner 4x4 data bits using local threshold
             uint8_t inner[4][4];
             int onesCount = 0;
             for (int r = 0; r < 4; r++) {
                 for (int c = 0; c < 4; c++) {
-                    int sx = b.minX + (int)((c + 1.5f) * bw / 6.0f);
-                    int sy = b.minY + (int)((r + 1.5f) * bh / 6.0f);
-                    sx = constrain(sx, 0, W - 1);
-                    sy = constrain(sy, 0, rowLimit - 1);
+                    int sx = constrain(b.minX + (int)((c + 1.5f) * bw / 6.0f), 0, W - 1);
+                    int sy = constrain(b.minY + (int)((r + 1.5f) * bh / 6.0f), 0, rowLimit - 1);
                     inner[r][c] = (fb->buf[sy * W + sx] > localThresh) ? 1 : 0;
                     if (inner[r][c]) onesCount++;
                 }
@@ -266,10 +246,10 @@ TargetDetection CameraVision::scanFullFrame(camera_fb_t *fb) {
                 continue;
             }
 
-            // 5. Decode against DICT_4X4_50 with 1-bit error correction (hamming <= 1, matches OpenCV)
+            // 4. Decode against ArUco DICT_4X4_50 with up to 2-bit error correction
             int hamming = 99;
             int decodedId = decodeAruco4x4(inner, hamming);
-            bool validMatch = (decodedId >= 0 && hamming <= 1);
+            bool validMatch = (decodedId >= 0 && hamming <= 2);
 
 #if defined(TARGET_ARUCO_ID) && (TARGET_ARUCO_ID >= 0)
             if (decodedId != TARGET_ARUCO_ID) {

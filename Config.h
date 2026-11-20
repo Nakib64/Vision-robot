@@ -63,7 +63,7 @@
 // -----------------------------
 // 3. VISION & TARGET PARAMETERS
 // -----------------------------
-#define TARGET_ARUCO_ID        0       // Target marker ID (0 for aruco_a4_id0.png; -1 for any marker)
+#define TARGET_ARUCO_ID       -1       // Target marker ID (-1 for any marker/DICT_4X4_50; >=0 for specific ID)
 #define TARGET_REAL_WIDTH_CM   10.0f   // Printed tag physical width (cm)
 #define STOP_DISTANCE_CM       25.0f   // Trigger TARGET_REACHED at <= 25 cm
 
